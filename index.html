@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+    <meta charset='utf-8'>
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+    <meta name="description" content="Apache-http-proxy : How to configure apache HTTP proxy">
+
+    <link rel="stylesheet" type="text/css" media="screen" href="stylesheets/stylesheet.css">
+
+    <title>Apache-http-proxy</title>
+  </head>
+
+  <body>
+
+    <!-- HEADER -->
+    <div id="header_wrap" class="outer">
+        <header class="inner">
+          <a id="forkme_banner" href="https://github.com/UrianHong/Apache-HTTP-Proxy">View on GitHub</a>
+
+          <h1 id="project_title">Apache-http-proxy</h1>
+          <h2 id="project_tagline">How to configure apache HTTP proxy</h2>
+
+            <section id="downloads">
+              <a class="zip_download_link" href="https://github.com/UrianHong/Apache-HTTP-Proxy/zipball/master">Download this project as a .zip file</a>
+              <a class="tar_download_link" href="https://github.com/UrianHong/Apache-HTTP-Proxy/tarball/master">Download this project as a tar.gz file</a>
+            </section>
+        </header>
+    </div>
+
+    <!-- MAIN CONTENT -->
+    <div id="main_content_wrap" class="outer">
+      <section id="main_content" class="inner">
+        <p>准备篇：</p>
+
+<p>1、配置防火墙，开启80端口、3306端口<br>
+<code>vi /etc/sysconfig/iptables</code><br>
+<code>-A INPUT -m state --state NEW -m tcp -p tcp --dport 80 -j ACCEPT</code> #允许80端口通过防火墙<br>
+<code>-A INPUT -m state --state NEW -m tcp -p tcp --dport 3306 -j ACCEPT</code> #允许3306端口通过防火墙<br></p>
+
+<p>备注：很多网友把这两条规则添加到防火墙配置的最后一行，导致防火墙启动失败，<br></p>
+
+<p>正确的应该是添加到默认的22端口这条规则的下面<br></p>
+
+<p>如下所示：<br></p>
+
+<p>系统运维 温馨提醒：qihang01原创内容版权所有,转载请注明出处及原文链接<br></p>
+
+<h6>
+<a id="" class="anchor" href="#" aria-hidden="true"><span class="octicon octicon-link"></span></a>##################################################<br>
+</h6>
+
+<p><code># Firewall configuration written by system-config-firewall</code><br>
+<code># Manual customization of this file is not recommended.</code><br>
+<code>*filter</code><br>
+<code>:INPUT ACCEPT [0:0]</code><br>
+<code>:FORWARD ACCEPT [0:0]</code><br>
+<code>:OUTPUT ACCEPT [0:0]</code><br>
+<code>-A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT</code><br>
+<code>-A INPUT -p icmp -j ACCEPT</code><br>
+<code>-A INPUT -i lo -j ACCEPT</code><br>
+<code>-A INPUT -m state --state NEW -m tcp -p tcp --dport 22 -j ACCEPT</code><br>
+<code>-A INPUT -m state --state NEW -m tcp -p tcp --dport 80 -j ACCEPT</code><br>
+<code>-A INPUT -m state --state NEW -m tcp -p tcp --dport 3306 -j ACCEPT</code><br>
+<code>-A INPUT -j REJECT --reject-with icmp-host-prohibited</code><br>
+<code>-A FORWARD -j REJECT --reject-with icmp-host-prohibited</code><br>
+<code>COMMIT</code><br></p>
+
+<h6>
+<a id="-1" class="anchor" href="#-1" aria-hidden="true"><span class="octicon octicon-link"></span></a>##################################################<br>
+</h6>
+
+<p><code>/etc/init.d/iptables restart</code> #重启防火墙使配置生效<br></p>
+
+<p>2、关闭SELINUX<br>
+<code>vi /etc/selinux/config</code><br>
+<code>#SELINUX=enforcing</code> #注释掉<br>
+<code>#SELINUXTYPE=targeted</code> #注释掉<br>
+<code>SELINUX=disabled</code> #增加<br>
+<code>:wq!</code>#保存退出<br>
+<code>shutdown -r now</code>#重启系统<br></p>
+
+<p>安装篇：<br></p>
+
+<p>一、安装Apache<br>
+<code>yum install httpd</code> #根据提示，输入Y安装即可成功安装<br>
+<code>/etc/init.d/httpd start</code>#启动Apache<br>
+备注：Apache启动之后会提示错误：<br>
+正在启动 httpd:httpd: Could not reliably determine the server's fully qualif domain name, using ::1 for ServerName<br>
+解决办法：<br>
+<code>vi /etc/httpd/conf/httpd.conf</code> #编辑<br>
+找到 #ServerName <a href="http://www.example.com:80">www.example.com:80</a><br>
+修改为 ServerName <a href="http://www.urian.org">www.urian.org</a> #这里设置为你自己的域名，如果没有域名，可以设置为localhost<br>
+:wq! #保存退出<br>
+<code>chkconfig httpd on</code> #设为开机启动<br>
+<code>/etc/init.d/httpd restart</code> #重启Apache<br></p>
+
+<p>配置篇：</p>
+
+<p>接下来我们修改Apache的配置文件使其支持HTTP代理服务器功能。用文本编辑器打开httpd.conf文件。该文件位于Apache安装目
+录的conf目录下。如果你在安装Apache的时候没有改变安装路径，那么它应当位于C:\Program Files\Apache
+Group\Apache\conf\httpd.conf。<br>
+首先要添加代理服务器模块。找到下面这几行：<br>
+<code>#LoadModule proxy_module modules/mod_proxy.so</code><br>
+<code>#LoadModule proxy_connect_module modules/mod_proxy_connect.so</code><br>
+<code>#LoadModule proxy_http_module modules/mod_proxy_http.so</code><br>
+<code>#LoadModule proxy_ftp_module modules/mod_proxy_ftp.so</code><br>
+去掉前面的#号使相应的模块生效。然后使用托盘中的Apache控制程序重新启动Apache。（也可以使用命令行net stop
+apache2然后net start apache2命令进行服务器重启。）这时Apache应该能够正常启动，虽然现在它还不是代理服务器。<br>
+然后我们在配置文件中加入下面这一行：<br>
+<code>ProxyRequests On</code><br></p>
+
+<p>最后重启apache服务器：<code>/etc/init.d/httpd restart</code></p>
+      </section>
+    </div>
+
+    <!-- FOOTER  -->
+    <div id="footer_wrap" class="outer">
+      <footer class="inner">
+        <p class="copyright">Apache-http-proxy maintained by <a href="https://github.com/UrianHong">UrianHong</a></p>
+        <p>Published with <a href="https://pages.github.com">GitHub Pages</a></p>
+      </footer>
+    </div>
+
+    
+
+  </body>
+</html>
